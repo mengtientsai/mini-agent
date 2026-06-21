@@ -1,26 +1,43 @@
 import 'dotenv/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+// 1. Import Node's built-in tool for reading terminal inputs
+import * as readline from 'readline'; 
 
-// 1. Initialize the client by explicitly passing your key from the .env file
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
+const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
 
-async function main() {
-    console.log("Connecting to Gemini...");
+// 2. Configure the interface to listen to your standard terminal input/output
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 
-    // 2. Specify the model you want to use (gemini-1.5-flash is excellent for fast agent loops)
-    const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
+console.log("Mini Agent Initialized. Type 'exit' to quit.\n");
 
-    // 3. The Prompt
-    const prompt = "Hello! I am a data engineer building my first AI agent. Who are you?";
+// 3. Create the recursive chat loop
+async function chat() {
+    // rl.question acts exactly like Python's input()
+    rl.question('You: ', async (userInput) => {
+        
+        // Escape hatch to close the program
+        if (userInput.toLowerCase() === 'exit') {
+            console.log("Shutting down Mini...");
+            rl.close();
+            return;
+        }
 
-    // 4. The API Call
-    const result = await model.generateContent(prompt);
+        try {
+            // Send the dynamic user input to Gemini
+            const result = await model.generateContent(userInput);
+            console.log(`\nMini-Agent: ${result.response.text()}\n`);
+        } catch (error) {
+            console.error("Error communicating with Gemini:", error);
+        }
 
-    console.log("\nGemini's Response:");
-    
-    // 5. Extract and print the text from the response object
-    console.log(result.response.text());
+        // 4. Call the function again to restart the loop!
+        chat();
+    });
 }
 
-// Execute the function
-main().catch(console.error);
+// Kick off the very first turn of the conversation
+chat();
