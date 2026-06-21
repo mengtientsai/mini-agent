@@ -1,43 +1,44 @@
 import 'dotenv/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-// 1. Import Node's built-in tool for reading terminal inputs
 import * as readline from 'readline'; 
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
 
-// 2. Configure the interface to listen to your standard terminal input/output
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
 });
 
-console.log("Mini Agent Initialized. Type 'exit' to quit.\n");
+console.log("Mini-Claw Agent Initialized (Now with Memory!). Type 'exit' to quit.\n");
 
-// 3. Create the recursive chat loop
-async function chat() {
-    // rl.question acts exactly like Python's input()
+// 1. We initialize a "chat session". 
+// Under the hood, this creates a data array to store the back-and-forth history.
+const chatSession = model.startChat({
+    history: [] // Starts empty, but will automatically append messages!
+});
+
+async function runChat() {
     rl.question('You: ', async (userInput) => {
         
-        // Escape hatch to close the program
         if (userInput.toLowerCase() === 'exit') {
-            console.log("Shutting down Mini...");
+            console.log("Shutting down Mini-Claw...");
             rl.close();
             return;
         }
 
         try {
-            // Send the dynamic user input to Gemini
-            const result = await model.generateContent(userInput);
-            console.log(`\nMini-Agent: ${result.response.text()}\n`);
+            // 2. Instead of 'model.generateContent', we use 'chatSession.sendMessage'.
+            // This automatically passes the entire history array + your new message to the LLM.
+            const result = await chatSession.sendMessage(userInput);
+            console.log(`\nMini-Claw: ${result.response.text()}\n`);
         } catch (error) {
             console.error("Error communicating with Gemini:", error);
         }
 
-        // 4. Call the function again to restart the loop!
-        chat();
+        // 3. Loop again
+        runChat();
     });
 }
 
-// Kick off the very first turn of the conversation
-chat();
+runChat();
